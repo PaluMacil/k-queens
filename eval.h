@@ -2,7 +2,9 @@
 #define EVAL_H
 
 #define MIN_QUEENS 1
-#define MAX_QUEENS 16
+#define MAX_QUEENS 26
+#define MASTER 0
+#define TAG_DONE 0
 
 int queenNum;
 int printSolutions;

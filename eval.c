@@ -1,6 +1,7 @@
 #include "eval.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <mpi.h>
 
 int checkPosition(const int *board, int col, int row) {
     // this is the first column, so there are no other queens to attack
@@ -45,8 +46,6 @@ void evalColumn(int *board, int col) {
             } else {
                 evalColumn(board, col + 1);
             }
-            //    for (row = 0; row < queenNum; row++) {
-            //    }
         }
     }
 }

@@ -2,16 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include "eval.h"
+#include <mpi.h>
 
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("number of queens must be specified (1 - 16)\n");
-        return 1;
-    }
-    printSolutions = argc > 2 && strcmp(argv[2], "true") == 0;
+    int myRank, numNodes, numDone;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numNodes);
+    numDone = 0;
 
-    int *board = allocate(atoi(argv[1]));
+    printSolutions = argc > 1 && strcmp(argv[1], "true") == 0;
+
+    int *board = allocate(numNodes);
     if (board == NULL) {
         return 1;
     }
@@ -22,21 +25,31 @@ int main(int argc, char *argv[]) {
         board[i] = -1;
     }
 
-    if (printSolutions) {
-        printf("Solutions:\n");
-    }
-    // evaluate board, starting with column 0
-    evalColumn(board, 0);
+    // evaluate board, outputting the obvious solution for k=1,
+    if (queenNum == 1) {
+        printf("There is one solution for one queen.\n");
+    } else {
+        // col 0 is assigned based upon a node's rank
+        board[0] = myRank;
+        evalColumn(board, 1);
+        MPI_Send(&solutionCount, 1, MPI_INT, MASTER, TAG_DONE, MPI_COMM_WORLD);
 
-    if (printSolutions && solutionCount == 0) {
-        printf("none\n");
+        if (myRank == MASTER) {
+            int incomingCount;
+            solutionCount = 0;
+            int source;
+            for (source = 0; source < queenNum; source++) {
+                MPI_Recv(&incomingCount, 1, MPI_INT, source, TAG_DONE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                solutionCount = solutionCount + incomingCount;
+            }
+            printf("There are %d solutions for %d queens.\n", solutionCount, queenNum);
+            if (printSolutions && solutionCount == 0) {
+                printf("none\n");
+            }
+        }
     }
-    const char * singularPhrase = "There is one solutions for one queen.\n";
-    const char * pluralPhrase = "There are %d solutions for %d queens.\n";
-    printf(solutionCount == 1 ? singularPhrase : pluralPhrase,
-           solutionCount,
-           queenNum);
 
     free(board);
+    MPI_Finalize();
     return 0;
 }
